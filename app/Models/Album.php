@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
-class Album extends Model
-{
+class Album extends Model {
     use HasFactory;
 
-    protected $table = 'albums';
-    protected $fillable = ['title', 'artist', 'release_date'];
-    
+    protected $fillable = ['title', 'artist', 'release_date', 'votes'];
+
+    public function votes() {
+        return $this->hasMany(Vote::class);
+    }
 }

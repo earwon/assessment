@@ -10,4 +10,6 @@ php artisan key:generate
 php artisan migrate --seed
 ```
 # Use this command to run the backend
-```bash php artisan serve```
+```bash 
+php artisan serve
+```
