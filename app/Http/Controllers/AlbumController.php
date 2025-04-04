@@ -9,62 +9,66 @@ use Illuminate\Support\Facades\Auth;
 
 class AlbumController extends Controller {
     public function index(Request $request) {
-        $query = Album::query();
+        // Get sorting parameters
+        $sortBy = $request->query('sort', 'votes'); // Default: Sort by votes
+        $order = $sortBy === 'title' ? 'asc' : 'desc'; // Alphabetical if title
 
-        // Sorting
-        if ($request->sort === 'votes') {
-            $query->orderByDesc('votes')->orderBy('title');
+        // Fetch albums with vote count & user's vote status
+        $albums = Album::withCount('votes')
+            ->when($sortBy === 'votes', function ($query) {
+                $query->orderBy('votes_count', 'desc')->orderBy('title', 'asc'); // Sort by votes then title
+            })
+            ->when($sortBy === 'title', function ($query) {
+                $query->orderBy('title', 'asc');
+            })
+            ->paginate(20); // Use pagination
+
+        if(Auth::check()) {
+            $userId = Auth::id();
+            foreach ($albums as $album) {
+                $album->userVote = $album->votes()->where('user_id', $userId)->value('vote');
+            }
         }
 
-        // Searching
-        if ($request->has('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhere('artist', 'like', '%' . $request->search . '%');
-        }
-
-        // Pagination / Lazy Loading
-        return $query->paginate(10);
-    }
-
-    public function store(Request $request) {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'artist' => 'required|string|max:255',
-            'release_date' => 'required|date',
+        return response()->json([
+            'albums' => $albums,
         ]);
-
-        $album = Album::create($validated);
-        return response()->json($album, 201);
     }
 
     public function vote(Request $request, $albumId) {
         $user = Auth::user();
         $album = Album::findOrFail($albumId);
-
-        // Check if user already voted
-        $existingVote = Vote::where('user_id', $user->id)->where('album_id', $albumId)->first();
-        
-        if ($existingVote) {
-            return response()->json(['message' => 'You have already voted for this album'], 403);
-        }
-
-        $voteType = $request->input('type');
-        if (!in_array($voteType, ['up', 'down'])) {
-            return response()->json(['message' => 'Invalid vote type'], 400);
-        }
-
-        // Register the vote
-        Vote::create([
-            'user_id' => $user->id,
-            'album_id' => $albumId,
-            'type' => $voteType,
+    
+        $request->validate([
+            'vote' => 'required|in:upvote,downvote',
         ]);
-
-        // Update album votes count
-        $album->votes += ($voteType === 'up') ? 1 : -1;
-        $album->save();
-
-        return response()->json(['message' => 'Vote recorded', 'votes' => $album->votes]);
+    
+        $newVoteType = $request->vote;
+    
+        // Check if the user has already voted
+        $existingVote = Vote::where('user_id', $user->id)
+                            ->where('album_id', $albumId)
+                            ->first();
+    
+        if ($existingVote) {
+            if ($existingVote->vote === $newVoteType) {
+                // If user clicks the same vote, remove their vote (toggle off)
+                $existingVote->delete();
+                return response()->json(['message' => 'Vote removed'], 200);
+            } else {
+                // If user changes vote, update it
+                $existingVote->update(['vote' => $newVoteType]);
+                return response()->json(['message' => 'Vote updated'], 200);
+            }
+        } else {
+            // If no existing vote, create a new one
+            Vote::create([
+                'user_id' => $user->id,
+                'album_id' => $albumId,
+                'vote' => $newVoteType,
+            ]);
+            return response()->json(['message' => 'Vote added'], 201);
+        }
     }
 
     public function destroy($id) {

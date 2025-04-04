@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/sanctum/csrf-cookie', function() {
+Route::get('/api/sanctum/csrf-cookie', function() {
     return response()->json(['message' => 'CSRF token set']);
 });
 

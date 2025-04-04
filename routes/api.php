@@ -15,7 +15,10 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/albums', [AlbumController::class, 'index']);
-    Route::post('/albums', [AlbumController::class, 'store'])->middleware('admin');
     Route::post('/albums/{id}/vote', [AlbumController::class, 'vote']);
-    Route::delete('/albums/{id}', [AlbumController::class, 'destroy'])->middleware('admin');
+    
+    Route::middleware(['admin'])->group(function () {
+        Route::delete('/albums/{id}', [AlbumController::class, 'destroy']); // Admin-only
+    });
 });
+

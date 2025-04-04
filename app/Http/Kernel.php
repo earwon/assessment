@@ -13,6 +13,7 @@ class Kernel extends HttpKernel {
         \Illuminate\Http\Middleware\ValidatePostSize::class,
         \Illuminate\Http\Middleware\TrimStrings::class,
         \Illuminate\Http\Middleware\ConvertEmptyStringsToNull::class,
+        Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
     ];
 
     protected $middlewareGroups = [
@@ -21,6 +22,7 @@ class Kernel extends HttpKernel {
             \Illuminate\Http\Middleware\HandleCors::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \Illuminate\Session\Middleware\StartSession::class,
         ],
     ];
 
